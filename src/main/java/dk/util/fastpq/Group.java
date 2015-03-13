@@ -1,6 +1,8 @@
 package dk.util.fastpq;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 public class Group {
@@ -14,6 +16,27 @@ public class Group {
     }
 
     public List<Integer> getNextEmptySlot() {
-        return firstEmpty >= slots.size() ? null : slots.get(firstEmpty++);
+        return hasEmptySlots() ? slots.get(firstEmpty++) : null;
+    }
+
+    public boolean hasEmptySlots() {
+        return firstEmpty < slots.size();
+    }
+
+    public List<Integer> getMerged() {
+        // TODO implement merge
+        List<Integer> result = new ArrayList<>();
+        for (List<Integer> slot : slots) {
+            result.addAll(slot);
+        }
+        Collections.sort(result);
+        return result;
+    }
+
+    public void clear() {
+        for (List<Integer> slot : slots) {
+            slot.clear();
+        }
+        firstEmpty = 0;
     }
 }

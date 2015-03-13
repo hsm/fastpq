@@ -52,13 +52,30 @@ public class FastPQ {
             } else if (i < maxDeletionsBufferSize + maxHeapSize) {
                 firstGroupBuffer.add(integer);
             } else { // deletion buffer and group buffer full
-                List<Integer> emptySlot = groups.get(0).getNextEmptySlot();
-                if (emptySlot == null) {
-                    throw new RuntimeException("We need to overflow to next group...");
+                Group firstGroup = groups.get(0);
+                List<Integer> tail = merged.subList(i, merged.size());
+                if (firstGroup.hasEmptySlots()) {
+                    firstGroup.getNextEmptySlot().addAll(tail);
                 } else {
-                    emptySlot.addAll(merged.subList(i, merged.size()));
-                    break;
+                    int lastGroupTouchedIndex = pushRight(tail, 0);
+                    transferGroupBuffersToFirstGroup(lastGroupTouchedIndex);
                 }
+                break;
+            }
+        }
+    }
+
+    private void transferGroupBuffersToFirstGroup(int toGroupBufferIndexInclusive) {
+        Group firstGroup = groups.get(0);
+        for (int i = 0; i <= toGroupBufferIndexInclusive; i++) {
+            List<Integer> groupBuffer = groupBuffers.get(i);
+            if (!groupBuffer.isEmpty()) {
+                if (!firstGroup.hasEmptySlots()) {
+                    pushRight(new ArrayList<>(), 0);
+                }
+                firstGroup.getNextEmptySlot().addAll(groupBuffer);
+                groupBuffer.clear();
+
             }
         }
     }
@@ -70,6 +87,7 @@ public class FastPQ {
 
     @SafeVarargs
     private final List<Integer> merge(List<Integer>... lists) {
+        // TODO implement merge
         List<Integer> result = new ArrayList<>();
         for (List<Integer> list : lists) {
             result.addAll(list);
@@ -78,31 +96,30 @@ public class FastPQ {
         return result;
     }
 
+    private int pushRight(List<Integer> list, int fromGroupIndex) {
+        int toGroupIndex = fromGroupIndex + 1;
+        if (toGroupIndex >= groupBuffers.size()) {
+            assert (toGroupIndex == groupBuffers.size());
+            addNewGroup();
+        }
+        Group fromGroup = groups.get(fromGroupIndex);
+        List<Integer> payload = fromGroup.getMerged();
+        assert (payload.size() <= maxHeapSize * Math.pow(maxNumberOfSlots, toGroupIndex));
+        assert (!fromGroup.hasEmptySlots());
+        fromGroup.clear();
+        if (!list.isEmpty()) {
+            fromGroup.getNextEmptySlot().addAll(list);
+        }
+        Group toGroup = groups.get(toGroupIndex);
+        if (toGroup.hasEmptySlots()) {
+            toGroup.getNextEmptySlot().addAll(payload);
+        } else {
+            return pushRight(payload, toGroupIndex);
+        }
+        return toGroupIndex;
+    }
 
     public int deleteMin() {
         return insertHeap.remove();
-    }
-
-    public static void main(String[] args) {
-        FastPQ fastPQ = new FastPQ(4, 2, 2);
-        fastPQ.insert(5);
-        fastPQ.insert(2);
-        fastPQ.insert(4);
-        fastPQ.insert(20);
-        fastPQ.insert(12);
-        fastPQ.insert(15);
-        fastPQ.insert(17);
-        fastPQ.insert(16);
-        fastPQ.insert(-54);
-        fastPQ.insert(12);
-
-
-        for (int i = 0; i < 10; i++) {
-            System.out.println(fastPQ.deleteMin());
-        }
-
-
-
-        // TODO
     }
 }
